@@ -32,8 +32,6 @@ password = os.getenv("LINKEDIN_PASS")
 # Set LinkedIn page URL for scraping
 page = 'https://www.linkedin.com/company/nike'
 
-# Initialize WebDriver for Chrome
-browser = webdriver.Chrome()
 
 # Open LinkedIn login page
 browser.get('https://www.linkedin.com/login')
