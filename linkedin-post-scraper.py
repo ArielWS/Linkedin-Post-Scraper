@@ -69,8 +69,21 @@ time.sleep(random.uniform(3, 5))
 # Navigate and scroll
 # ----------------------------
 page = "https://www.linkedin.com/company/nike"
-browser.get(f"{page}/posts")
-time.sleep(random.uniform(1, 2))
+try:
+    # give the page up to 30s to load before timing out
+    browser.set_page_load_timeout(30)
+    browser.get(f"{page}/posts")
+except TimeoutException:
+    print("Warning: page load timed out, continuing with what we have…")
+
+# wait up to 15s for at least one post container to appear
+WebDriverWait(browser, 15).until(
+    EC.presence_of_element_located((By.CSS_SELECTOR, "div.feed-shared-update-v2"))
+)
+print("Page loaded, beginning to scroll…")
+
+# small human‐like pause before scrolling
++time.sleep(random.uniform(1, 2))
 
 company_name = page.rstrip("/").split("/")[-1].replace("-", " ").title()
 print(f"Scraping posts for: {company_name}")
@@ -89,6 +102,7 @@ while no_change_count < 3 and scrolls < MAX_SCROLLS:
     else:
         no_change_count, last_height = 0, new_height
     scrolls += 1
+print(f"Done scrolling after {scrolls} iterations")
 
 # ----------------------------
 # Parse page and extract containers
