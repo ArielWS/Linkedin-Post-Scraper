@@ -83,7 +83,7 @@ WebDriverWait(browser, 15).until(
 print("Page loaded, beginning to scroll…")
 
 # small human‐like pause before scrolling
-+time.sleep(random.uniform(1, 2))
+time.sleep(random.uniform(1, 2))
 
 company_name = page.rstrip("/").split("/")[-1].replace("-", " ").title()
 print(f"Scraping posts for: {company_name}")
