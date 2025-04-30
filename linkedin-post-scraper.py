@@ -9,6 +9,8 @@ from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup as bs
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from dotenv import load_dotenv
+load_dotenv()   # reads .env into os.environ
 
 # ----------------------------
 # Configuration
