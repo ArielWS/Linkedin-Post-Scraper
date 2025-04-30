@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.options import Options  # you may not need this i
 from bs4 import BeautifulSoup as bs
 import time, re, pandas as pd
 from datetime import datetime
-from dateutil.relativedelta import relativedel
+from dateutil.relativedelta import relativedelta
 
 import os
 
