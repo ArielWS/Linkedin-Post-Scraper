@@ -23,8 +23,8 @@ browser = uc.Chrome(
 )
 
 #LinkedIn Credentials
-username=""
-password=""
+username="founderjobronin@gmail.com"
+password="1thisisthenewtestpassword1!"
 
 # Set LinkedIn page URL for scraping
 page = 'https://www.linkedin.com/company/nike'
