@@ -1,7 +1,7 @@
 # Import necessary libraries
 import os
 import time
-import re
+import random
 import pandas as pd
 import undetected_chromedriver as uc
 from webdriver_manager.chrome import ChromeDriverManager
@@ -10,115 +10,130 @@ from bs4 import BeautifulSoup as bs
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-# LinkedIn Credentials from .env
+# ----------------------------
+# Configuration
+# ----------------------------
+MAX_SCROLLS = 8     # max full-page scrolls per run
+MAX_POSTS   = 25    # max posts to process per run
+SCROLL_PAUSE = 1.5  # base scroll pause (seconds)
+HUMAN_HOUR_START = 9
+HUMAN_HOUR_END   = 18
+
+# ----------------------------
+# Human-hours guard (optional)
+# ----------------------------
+current_hour = datetime.now().hour
+if current_hour < HUMAN_HOUR_START or current_hour >= HUMAN_HOUR_END:
+    print("Outside of human browsing hours. Exiting.")
+    exit()
+
+# ----------------------------
+# Credentials from .env
+# ----------------------------
 username = os.getenv("LINKEDIN_USER")
 password = os.getenv("LINKEDIN_PASS")
 if not username or not password:
     raise RuntimeError("Please set LINKEDIN_USER and LINKEDIN_PASS in your environment.")
 
-# Initialize stealth Chrome options
+# ----------------------------
+# Launch stealth Chrome
+# ----------------------------
 options = uc.ChromeOptions()
 options.add_argument("--start-maximized")
-# options.add_argument("--user-data-dir=/path/to/your/chrome/profile")  # optional profile isolation
+# options.add_argument("--user-data-dir=/path/to/your/chrome/profile")  # if desired
 
-# Launch a headful, undetected Chrome
 browser = uc.Chrome(
     driver_executable_path=ChromeDriverManager().install(),
     options=options
 )
 
-# Set LinkedIn page URL for scraping
-page = 'https://www.linkedin.com/in/ariel-wertlen-spilkin-73958374/'
+# ----------------------------
+# Log in to LinkedIn
+# ----------------------------
+browser.get("https://www.linkedin.com/login")
+time.sleep(random.uniform(1, 3))
 
-# Open LinkedIn login page
-browser.get('https://www.linkedin.com/login')
-time.sleep(2)
-
-# Enter login credentials and submit
 browser.find_element(By.ID, "username").send_keys(username)
+time.sleep(random.uniform(0.5, 1.5))
 browser.find_element(By.ID, "password").send_keys(password)
+time.sleep(random.uniform(0.5, 1.5))
 browser.find_element(By.ID, "password").submit()
-time.sleep(3)  # wait for post-login redirect
+time.sleep(random.uniform(3, 5))
 
-# Navigate to the company’s posts page
-post_page = page + '/posts'
-browser.get(post_page)
-time.sleep(2)
+# ----------------------------
+# Navigate and scroll
+# ----------------------------
+page = "https://www.linkedin.com/company/nike"
+browser.get(f"{page}/posts")
+time.sleep(random.uniform(1, 2))
 
-# Extract company name from URL
-company_name = page.rstrip('/').split('/')[-1].replace('-', ' ').title()
+company_name = page.rstrip("/").split("/")[-1].replace("-", " ").title()
 print(f"Scraping posts for: {company_name}")
 
-# Scroll parameters
-SCROLL_PAUSE_TIME = 1.5
 last_height = browser.execute_script("return document.body.scrollHeight")
 no_change_count = 0
+scrolls = 0
 
-# Scroll until no new content loads
-while no_change_count < 3:
+while no_change_count < 3 and scrolls < MAX_SCROLLS:
     browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(SCROLL_PAUSE_TIME)
+    pause = SCROLL_PAUSE + random.uniform(0.5, 2.0)
+    time.sleep(pause)
     new_height = browser.execute_script("return document.body.scrollHeight")
     if new_height == last_height:
         no_change_count += 1
     else:
-        no_change_count = 0
-        last_height = new_height
+        no_change_count, last_height = 0, new_height
+    scrolls += 1
 
-# Parse the page source
+# ----------------------------
+# Parse page and extract containers
+# ----------------------------
 linkedin_soup = bs(browser.page_source, "html.parser")
 
-# (Optional) save raw HTML
-with open(f"{company_name}_soup.txt", "w+", encoding="utf-8") as t:
-    t.write(linkedin_soup.prettify())
-
-# Find all post containers
 containers = [
     c for c in linkedin_soup.find_all("div", {"class": "feed-shared-update-v2"})
     if c.get("data-urn", "").startswith("activity")
-]
+][:MAX_POSTS]  # cap to MAX_POSTS
 
-# Helper: convert relative dates to YYYY-MM-DD
+# ----------------------------
+# Helper functions
+# ----------------------------
 def get_actual_date(date_str):
-    today = datetime.today().strftime('%Y-%m-%d')
+    today = datetime.today().strftime("%Y-%m-%d")
     def get_past_date(days=0, weeks=0, months=0, years=0):
-        dt = datetime.strptime(today, '%Y-%m-%d') - relativedelta(
+        dt = datetime.strptime(today, "%Y-%m-%d") - relativedelta(
             days=days, weeks=weeks, months=months, years=years)
-        return dt.strftime('%Y-%m-%d')
+        return dt.strftime("%Y-%m-%d")
 
-    if 'hour' in date_str:
+    if "hour" in date_str:
         return today
-    if 'day' in date_str:
+    if "day" in date_str:
         return get_past_date(days=int(date_str.split()[0]))
-    if 'week' in date_str:
+    if "week" in date_str:
         return get_past_date(weeks=int(date_str.split()[0]))
-    if 'month' in date_str:
+    if "month" in date_str:
         return get_past_date(months=int(date_str.split()[0]))
-    if 'year' in date_str:
+    if "year" in date_str:
         return get_past_date(years=int(date_str.split()[0]))
 
-    parts = date_str.split('-')
+    parts = date_str.split("-")
     if len(parts) == 2:
         m, d = parts
-        m, d = m.zfill(2), d.zfill(2)
-        return f"{datetime.today().year}-{m}-{d}"
+        return f"{datetime.today().year}-{m.zfill(2)}-{d.zfill(2)}"
     if len(parts) == 3:
-        y, m, d = parts[2], parts[0].zfill(2), parts[1].zfill(2)
-        return f"{y}-{m}-{d}"
+        return f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
     return date_str
 
-# Helper: expand "1.2K" → 1200, etc.
 def convert_abbreviated_to_number(s):
-    if 'K' in s:
-        return int(float(s.replace('K','')) * 1_000)
-    if 'M' in s:
-        return int(float(s.replace('M','')) * 1_000_000)
+    if "K" in s:
+        return int(float(s.replace("K", "")) * 1_000)
+    if "M" in s:
+        return int(float(s.replace("M", "")) * 1_000_000)
     try:
         return int(s)
     except:
         return 0
 
-# Helper: media info
 def get_media_info(container):
     candidates = [
         ("div", {"class": "update-components-video"}, "Video"),
@@ -132,48 +147,39 @@ def get_media_info(container):
     for tag, attrs, mtype in candidates:
         el = container.find(tag, attrs)
         if el:
-            a = el.find('a', href=True)
-            return (a['href'] if a else "None", mtype)
+            a = el.find("a", href=True)
+            return (a["href"] if a else "None", mtype)
     return ("None", "Unknown")
 
-# Gather post data
+# ----------------------------
+# Scrape posts into list
+# ----------------------------
 posts_data = []
 for container in containers:
-    post_text = container.find(
-        "div", {"class": "feed-shared-update-v2__description-wrapper"}
-    ).get_text(strip=True) if container.find(
-        "div", {"class": "feed-shared-update-v2__description-wrapper"}
-    ) else ""
+    # text
+    text_el = container.find("div", {"class": "feed-shared-update-v2__description-wrapper"})
+    post_text = text_el.get_text(strip=True) if text_el else ""
 
+    # media
     media_link, media_type = get_media_info(container)
 
-    raw_date = container.find(
-        "div", {"class": "ml4 mt2 text-body-xsmall t-black--light"}
-    ).get_text(strip=True) if container.find(
-        "div", {"class": "ml4 mt2 text-body-xsmall t-black--light"}
-    ) else ""
+    # date
+    date_el = container.find("div", {"class": "ml4 mt2 text-body-xsmall t-black--light"})
+    raw_date = date_el.get_text(strip=True) if date_el else ""
     post_date = get_actual_date(raw_date)
 
-    # Reactions
-    reaction_buttons = container.find_all(lambda t: t.name=='button' and
-                                          'aria-label' in t.attrs and
-                                          'reaction' in t['aria-label'].lower())
-    idx = 1 if len(reaction_buttons)>1 else 0
-    post_reactions = reaction_buttons[idx].text.strip() if reaction_buttons else "0"
+    # reactions/comments/shares
+    btns = lambda keyword: container.find_all(
+        lambda t: t.name=="button" and "aria-label" in t.attrs and keyword in t["aria-label"].lower()
+    )
+    reaction_buttons = btns("reaction")
+    post_reactions = reaction_buttons[1].text.strip() if len(reaction_buttons)>1 else (reaction_buttons[0].text.strip() if reaction_buttons else "0")
 
-    # Comments
-    comment_buttons = container.find_all(lambda t: t.name=='button' and
-                                         'aria-label' in t.attrs and
-                                         'comment' in t['aria-label'].lower())
-    idx = 1 if len(comment_buttons)>1 else 0
-    post_comments = comment_buttons[idx].text.strip() if comment_buttons else "0"
+    comment_buttons = btns("comment")
+    post_comments = comment_buttons[1].text.strip() if len(comment_buttons)>1 else (comment_buttons[0].text.strip() if comment_buttons else "0")
 
-    # Shares
-    share_buttons = container.find_all(lambda t: t.name=='button' and
-                                       'aria-label' in t.attrs and
-                                       'repost' in t['aria-label'].lower())
-    idx = 1 if len(share_buttons)>1 else 0
-    post_shares = share_buttons[idx].text.strip() if share_buttons else "0"
+    share_buttons = btns("repost")
+    post_shares = share_buttons[1].text.strip() if len(share_buttons)>1 else (share_buttons[0].text.strip() if share_buttons else "0")
 
     posts_data.append({
         "Page": company_name,
@@ -187,10 +193,12 @@ for container in containers:
         "Media Link": media_link
     })
 
-# Build DataFrame, sort and export
+# ----------------------------
+# Build DataFrame, sort & export
+# ----------------------------
 df = pd.DataFrame(posts_data)
 df.sort_values(by="Likes Numeric", ascending=False, inplace=True)
 
 csv_file = f"{company_name}_posts.csv"
-df.to_csv(csv_file, index=False, encoding='utf-8')
+df.to_csv(csv_file, index=False, encoding="utf-8")
 print(f"Data exported to {csv_file}")
