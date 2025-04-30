@@ -10,8 +10,17 @@ from datetime import datetime
 from dateutil.relativedelta import relativedel
 
 # Initialize Chrome options
-chrome_options = Options()
-today = datetime.today().strftime('%Y-%m-%d')
+# Stealth options
+options = uc.ChromeOptions()
+options.add_argument("--start-maximized")
+# (Optional) isolate profile so you don’t mix work cookies:
+# options.add_argument("--user-data-dir=/Users/yourname/Library/Application Support/Chrome/Profile 2")
+
+# Launch a headful, undetected Chrome
+browser = uc.Chrome(
+    driver_executable_path=ChromeDriverManager().install(),
+    options=options
+)
 
 #LinkedIn Credentials
 username=""
