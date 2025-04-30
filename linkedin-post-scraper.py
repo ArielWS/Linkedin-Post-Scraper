@@ -9,6 +9,11 @@ import time, re, pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedel
 
+import os
+
+username = os.getenv("LINKEDIN_USER")
+password = os.getenv("LINKEDIN_PASS")
+
 # Initialize Chrome options
 # Stealth options
 options = uc.ChromeOptions()
