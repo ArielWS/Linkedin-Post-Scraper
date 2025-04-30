@@ -68,7 +68,7 @@ time.sleep(random.uniform(3, 5))
 # ----------------------------
 # Navigate and scroll
 # ----------------------------
-page = "https://www.linkedin.com/company/nike"
+page = "https://www.linkedin.com/in/ariel-wertlen-spilkin-73958374/"
 try:
     # give the page up to 30s to load before timing out
     browser.set_page_load_timeout(30)
