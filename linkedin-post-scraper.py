@@ -28,7 +28,7 @@ browser = uc.Chrome(
 )
 
 # Set LinkedIn page URL for scraping
-page = 'https://www.linkedin.com/company/nike'
+page = 'https://www.linkedin.com/in/ariel-wertlen-spilkin-73958374/'
 
 # Open LinkedIn login page
 browser.get('https://www.linkedin.com/login')
