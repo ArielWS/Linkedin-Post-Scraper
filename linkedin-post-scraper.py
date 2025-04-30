@@ -11,8 +11,6 @@ from dateutil.relativedelta import relativedel
 
 import os
 
-username = os.getenv("LINKEDIN_USER")
-password = os.getenv("LINKEDIN_PASS")
 
 # Initialize Chrome options
 # Stealth options
@@ -28,8 +26,8 @@ browser = uc.Chrome(
 )
 
 #LinkedIn Credentials
-username="founderjobronin@gmail.com"
-password="1thisisthenewtestpassword1!"
+username = os.getenv("LINKEDIN_USER")
+password = os.getenv("LINKEDIN_PASS")
 
 # Set LinkedIn page URL for scraping
 page = 'https://www.linkedin.com/company/nike'
